@@ -36,9 +36,7 @@ class ItemPopularityIntegrationSpec
     CreateTableTestUtils.dropAndRecreateTables(system)
     // avoid concurrent creation of keyspace and tables
     val timeout = 10.seconds
-    Await.result(
-      PersistenceInit.initializeDefaultPlugins(system, timeout),
-      timeout)
+    Await.result(PersistenceInit.initializeDefaultPlugins(system, timeout), timeout)
 
     ShoppingCart.init(system)
 
@@ -91,8 +89,7 @@ class ItemPopularityIntegrationSpec
 
       eventually {
         ScalikeJdbcSession.withSession { session =>
-          itemPopularityRepository.getItem(session, item2).value should ===(
-            5 + 4)
+          itemPopularityRepository.getItem(session, item2).value should ===(5 + 4)
           itemPopularityRepository.getItem(session, item1).value should ===(3)
         }
       }

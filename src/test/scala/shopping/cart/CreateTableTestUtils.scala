@@ -28,10 +28,8 @@ object CreateTableTestUtils {
       for {
         _ <- SchemaUtils.dropIfExists()
         _ <- SchemaUtils.createIfNotExists()
-        _ <- JdbcProjection.dropOffsetTableIfExists(() =>
-          new ScalikeJdbcSession())
-        _ <- JdbcProjection.createOffsetTableIfNotExists(() =>
-          new ScalikeJdbcSession())
+        _ <- JdbcProjection.dropOffsetTableIfExists(() => new ScalikeJdbcSession())
+        _ <- JdbcProjection.createOffsetTableIfNotExists(() => new ScalikeJdbcSession())
       } yield Done,
       30.seconds)
     if (createUserTablesFile.exists()) {
@@ -42,13 +40,10 @@ object CreateTableTestUtils {
         } yield Done,
         30.seconds)
     }
-    LoggerFactory
-      .getLogger("shopping.cart.CreateTableTestUtils")
-      .info("Created tables")
+    LoggerFactory.getLogger("shopping.cart.CreateTableTestUtils").info("Created tables")
   }
 
-  private def dropUserTables()(
-      implicit system: ActorSystem[_]): Future[Done] = {
+  private def dropUserTables()(implicit system: ActorSystem[_]): Future[Done] = {
     SchemaUtils.applyScript("DROP TABLE IF EXISTS public.item_popularity;")
   }
 

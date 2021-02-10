@@ -21,8 +21,7 @@ object Main {
   }
 }
 
-class Main(context: ActorContext[Nothing])
-    extends AbstractBehavior[Nothing](context) {
+class Main(context: ActorContext[Nothing]) extends AbstractBehavior[Nothing](context) {
   val system = context.system
 
   ScalikeJdbcSetup.init(system)

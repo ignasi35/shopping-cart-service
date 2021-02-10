@@ -2,20 +2,14 @@ package shopping.cart.repository
 
 import scalikejdbc._
 
-
 trait ItemPopularityRepository {
   def update(session: ScalikeJdbcSession, itemId: String, delta: Int): Unit
   def getItem(session: ScalikeJdbcSession, itemId: String): Option[Long]
 }
 
-
-
 class ItemPopularityRepositoryImpl() extends ItemPopularityRepository {
 
-  override def update(
-      session: ScalikeJdbcSession,
-      itemId: String,
-      delta: Int): Unit = {
+  override def update(session: ScalikeJdbcSession, itemId: String, delta: Int): Unit = {
     session.db.withinTx { implicit dbSession =>
       // This uses the PostgreSQL `ON CONFLICT` feature
       // Alternatively, this can be implemented by first issuing the `UPDATE`
@@ -28,9 +22,7 @@ class ItemPopularityRepositoryImpl() extends ItemPopularityRepository {
     }
   }
 
-  override def getItem(
-      session: ScalikeJdbcSession,
-      itemId: String): Option[Long] = {
+  override def getItem(session: ScalikeJdbcSession, itemId: String): Option[Long] = {
     if (session.db.isTxAlreadyStarted) {
       session.db.withinTx { implicit dbSession =>
         select(itemId)
@@ -43,10 +35,6 @@ class ItemPopularityRepositoryImpl() extends ItemPopularityRepository {
   }
 
   private def select(itemId: String)(implicit dbSession: DBSession) = {
-    sql"SELECT count FROM item_popularity WHERE itemid = $itemId"
-      .map(_.long("count"))
-      .toOption()
-      .apply()
+    sql"SELECT count FROM item_popularity WHERE itemid = $itemId".map(_.long("count")).toOption().apply()
   }
 }
-

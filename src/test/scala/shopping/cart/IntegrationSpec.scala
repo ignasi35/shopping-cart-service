@@ -27,10 +27,7 @@ import shopping.cart.repository.ScalikeJdbcSetup
 object IntegrationSpec {
   val sharedConfig: Config = ConfigFactory.load("integration-test.conf")
 
-  private def nodeConfig(
-      grpcPort: Int,
-      managementPorts: Seq[Int],
-      managementPortIndex: Int): Config =
+  private def nodeConfig(grpcPort: Int, managementPorts: Seq[Int], managementPortIndex: Int): Config =
     ConfigFactory.parseString(s"""
       shopping-cart-service.grpc {
         interface = "localhost"
@@ -48,45 +45,30 @@ object IntegrationSpec {
       }
       """)
 
-  class TestNodeFixture(
-      grpcPort: Int,
-      managementPorts: Seq[Int],
-      managementPortIndex: Int) {
+  class TestNodeFixture(grpcPort: Int, managementPorts: Seq[Int], managementPortIndex: Int) {
     val testKit =
       ActorTestKit(
         "IntegrationSpec",
-        nodeConfig(grpcPort, managementPorts, managementPortIndex)
-          .withFallback(sharedConfig)
-          .resolve())
+        nodeConfig(grpcPort, managementPorts, managementPortIndex).withFallback(sharedConfig).resolve())
 
     def system: ActorSystem[_] = testKit.system
 
     private val clientSettings =
-      GrpcClientSettings
-        .connectToServiceAt("127.0.0.1", grpcPort)(testKit.system)
-        .withTls(false)
+      GrpcClientSettings.connectToServiceAt("127.0.0.1", grpcPort)(testKit.system).withTls(false)
     lazy val client: proto.ShoppingCartService =
       proto.ShoppingCartServiceClient(clientSettings)(testKit.system)
 
   }
 }
 
-class IntegrationSpec
-    extends AnyWordSpec
-    with Matchers
-    with BeforeAndAfterAll
-    with ScalaFutures
-    with Eventually {
+class IntegrationSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll with ScalaFutures with Eventually {
   import IntegrationSpec.TestNodeFixture
 
   implicit private val patience: PatienceConfig =
     PatienceConfig(10.seconds, Span(100, org.scalatest.time.Millis))
 
   private val (grpcPorts, managementPorts) =
-    SocketUtil
-      .temporaryServerAddresses(6, "127.0.0.1")
-      .map(_.getPort)
-      .splitAt(3)
+    SocketUtil.temporaryServerAddresses(6, "127.0.0.1").map(_.getPort).splitAt(3)
 
   // one TestKit (ActorSystem) per cluster node
   private val testNode1 =
@@ -111,9 +93,7 @@ class IntegrationSpec
     CreateTableTestUtils.dropAndRecreateTables(testNode1.system)
     // avoid concurrent creation of tables
     val timeout = 10.seconds
-    Await.result(
-      PersistenceInit.initializeDefaultPlugins(testNode1.system, timeout),
-      timeout)
+    Await.result(PersistenceInit.initializeDefaultPlugins(testNode1.system, timeout), timeout)
   }
 
   override protected def afterAll(): Unit = {
@@ -134,23 +114,20 @@ class IntegrationSpec
       eventually(PatienceConfiguration.Timeout(15.seconds)) {
         systems3.foreach { sys =>
           Cluster(sys).selfMember.status should ===(MemberStatus.Up)
-          Cluster(sys).state.members.unsorted.map(_.status) should ===(
-            Set(MemberStatus.Up))
+          Cluster(sys).state.members.unsorted.map(_.status) should ===(Set(MemberStatus.Up))
         }
       }
     }
 
     "update from different nodes via gRPC" in {
       // add from client1
-      val response1 = testNode1.client.addItem(
-        proto.AddItemRequest(cartId = "cart-1", itemId = "foo", quantity = 42))
+      val response1 = testNode1.client.addItem(proto.AddItemRequest(cartId = "cart-1", itemId = "foo", quantity = 42))
       val updatedCart1 = response1.futureValue
       updatedCart1.items.head.itemId should ===("foo")
       updatedCart1.items.head.quantity should ===(42)
 
       // add from client2
-      val response2 = testNode2.client.addItem(
-        proto.AddItemRequest(cartId = "cart-2", itemId = "bar", quantity = 17))
+      val response2 = testNode2.client.addItem(proto.AddItemRequest(cartId = "cart-2", itemId = "bar", quantity = 17))
       val updatedCart2 = response2.futureValue
       updatedCart2.items.head.itemId should ===("bar")
       updatedCart2.items.head.quantity should ===(17)
