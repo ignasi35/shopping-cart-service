@@ -24,20 +24,21 @@ object ShoppingCartServer {
     implicit val ec: ExecutionContext =
       system.executionContext
 
+    // a function from HttpRequest => Future[HttpResponse] is what an user should define
     val service: HttpRequest => Future[HttpResponse] =
       ServiceHandler.concatOrNotFound(
         proto.ShoppingCartServiceHandler.partial(grpcService),
         // ServerReflection enabled to support grpcurl without import-path and proto parameters
-        ServerReflection.partial(List(proto.ShoppingCartService))
-      ) 
+        ServerReflection.partial(List(proto.ShoppingCartService)))
 
+    // boilerplate
     val bound =
       Http()
         .newServerAt(interface, port)
         .bind(service)
-        .map(_.addToCoordinatedShutdown(3.seconds)) 
+        .map(_.addToCoordinatedShutdown(3.seconds))
 
-    bound.onComplete { 
+    bound.onComplete {
       case Success(binding) =>
         val address = binding.localAddress
         system.log.info(
@@ -48,6 +49,7 @@ object ShoppingCartServer {
         system.log.error("Failed to bind gRPC endpoint, terminating system", ex)
         system.terminate()
     }
+    // boilerplate
   }
 
 }

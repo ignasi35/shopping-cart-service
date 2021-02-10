@@ -25,19 +25,17 @@ class Main(context: ActorContext[Nothing])
     extends AbstractBehavior[Nothing](context) {
   val system = context.system
 
-  
-  ScalikeJdbcSetup.init(system) 
-  
+  ScalikeJdbcSetup.init(system)
 
+  // boilerplate
   AkkaManagement(system).start()
   ClusterBootstrap(system).start()
+  // boilerplate
 
   ShoppingCart.init(system)
 
-  
-  val itemPopularityRepository = new ItemPopularityRepositoryImpl() 
-  ItemPopularityProjection.init(system, itemPopularityRepository) 
-  
+  val itemPopularityRepository = new ItemPopularityRepositoryImpl()
+  ItemPopularityProjection.init(system, itemPopularityRepository)
 
   val grpcInterface =
     system.settings.config.getString("shopping-cart-service.grpc.interface")
@@ -45,8 +43,11 @@ class Main(context: ActorContext[Nothing])
     system.settings.config.getInt("shopping-cart-service.grpc.port")
   val grpcService =
     new ShoppingCartServiceImpl(system, itemPopularityRepository)
+
   ShoppingCartServer.start(grpcInterface, grpcPort, system, grpcService)
 
+  // boilerplate
   override def onMessage(msg: Nothing): Behavior[Nothing] =
     this
+  // boilerplate
 }
