@@ -13,10 +13,13 @@ import scala.concurrent.duration._
 
 object HttpServer {
 
-  def start(interface: String, port: Int, system: ActorSystem[_], httpF: HttpRequest => Future[HttpResponse]): Unit = {
+  def start(system: ActorSystem[_], httpF: HttpRequest => Future[HttpResponse]): Unit = {
     implicit val sys: ActorSystem[_] = system
     implicit val ec: ExecutionContext =
       system.executionContext
+
+    val interface = system.settings.config.getString("akka.http.interface")
+    val port = system.settings.config.getInt("akka.http.port")
 
     val bound =
       Http().newServerAt(interface, port).bind(httpF).map(_.addToCoordinatedShutdown(3.seconds))

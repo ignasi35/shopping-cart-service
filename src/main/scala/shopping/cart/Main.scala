@@ -1,24 +1,23 @@
 package shopping.cart
 
-import scala.concurrent.Future
-
 import akka.actor.typed.ActorSystem
-import akka.application.internal.AkkaClusterApplication
+import akka.actor.typed.scaladsl.Behaviors
+import akka.application.internal.HttpServer
 import akka.grpc.scaladsl.ServerReflection
 import akka.grpc.scaladsl.ServiceHandler
-import akka.http.scaladsl.model.HttpRequest
-import akka.http.scaladsl.model.HttpResponse
+import akka.management.cluster.bootstrap.ClusterBootstrap
+import akka.management.scaladsl.AkkaManagement
 import shopping.cart.repository.ItemPopularityRepositoryImpl
 import shopping.cart.repository.ScalikeJdbcSetup
 
-object Main extends AkkaClusterApplication {
+object Main {
 
-  override val applicationName: String = "ShoppingCartService"
+  def main(args: Array[String]): Unit = {
 
-  /**
-   * User main function.
-   */
-  override def init(args: Array[String])(implicit system: ActorSystem[Nothing]): HttpRequest => Future[HttpResponse] = {
+    implicit val system = ActorSystem[Nothing](Behaviors.empty[Nothing], "ShoppingCartService")
+
+    AkkaManagement(system).start()
+    ClusterBootstrap(system).start()
 
     // user DB tech choice bootstrap
     ScalikeJdbcSetup.init(system)
@@ -34,9 +33,14 @@ object Main extends AkkaClusterApplication {
 
     // user gRPC service
     val service = new ShoppingCartServiceImpl(system, repository)
-    ServiceHandler.concatOrNotFound(
-      proto.ShoppingCartServiceHandler.partial(service),
-      // ServerReflection enabled to support grpcurl without import-path and proto parameters
-      ServerReflection.partial(List(proto.ShoppingCartService)))
+    val grpcRoute =
+      ServiceHandler.concatOrNotFound(
+        proto.ShoppingCartServiceHandler.partial(service),
+        // ServerReflection enabled to support grpcurl without import-path and proto parameters
+        ServerReflection.partial(List(proto.ShoppingCartService)))
+
+    system.log.debug("Starting http server")
+    HttpServer.start(system, grpcRoute)
   }
+
 }
